@@ -1,29 +1,36 @@
-import React, { useEffect, useMemo, useState } from 'react'
-const defaults={minV:0.22,maxV:4.75,minKg:-10,maxKg:100,kg:80}
-const read=()=>{try{return {...defaults,...JSON.parse(localStorage.getItem('loadcell-settings')||'{}')}}catch{return defaults}}
-const clamp=(n,a,b)=>Math.min(Math.max(n,a),b)
+import React,{useEffect,useMemo,useState}from'react';
+const D={calMinKg:0,calMaxKg:100,minV:.22,maxV:4.75,sliderMinKg:-10,sliderMaxKg:100,kg:0};
+const load=()=>{try{return{...D,...JSON.parse(localStorage.getItem('hopper-scale-v2')||'{}')}}catch{return D}};
+const clamp=(n,a,b)=>Math.min(Math.max(n,a),b);
 export default function App(){
-  const initial=read(); const [minV,setMinV]=useState(initial.minV); const [maxV,setMaxV]=useState(initial.maxV)
-  const [minKg,setMinKg]=useState(initial.minKg); const [maxKg,setMaxKg]=useState(initial.maxKg); const [kg,setKg]=useState(initial.kg)
-  const [online,setOnline]=useState(navigator.onLine); const [installPrompt,setInstallPrompt]=useState(null)
-  const valid=maxV!==minV&&maxKg!==minKg&&maxKg>minKg
-  const kgToV=(w)=>minV+((w-minKg)/(maxKg-minKg))*(maxV-minV)
-  const vToKg=(v)=>minKg+((v-minV)/(maxV-minV))*(maxKg-minKg)
-  const voltage=valid?kgToV(kg):0
-  const progress=valid?clamp(((kg-minKg)/(maxKg-minKg))*100,0,100):0
-  useEffect(()=>localStorage.setItem('loadcell-settings',JSON.stringify({minV,maxV,minKg,maxKg,kg})),[minV,maxV,minKg,maxKg,kg])
-  useEffect(()=>{const on=()=>setOnline(navigator.onLine);const before=e=>{e.preventDefault();setInstallPrompt(e)};addEventListener('online',on);addEventListener('offline',on);addEventListener('beforeinstallprompt',before);return()=>{removeEventListener('online',on);removeEventListener('offline',on);removeEventListener('beforeinstallprompt',before)}},[])
-  const points=useMemo(()=>[0,25,50,75,100].map(p=>{const w=minKg+(maxKg-minKg)*p/100;return {p,w,v:valid?kgToV(w):0}}),[minV,maxV,minKg,maxKg,valid])
-  const number=(setter)=>(e)=>setter(e.target.value===''?'':Number(e.target.value))
-  const setWeight=(value)=>setKg(clamp(Number(value)||0,Number(minKg),Number(maxKg)))
-  const install=async()=>{if(installPrompt){await installPrompt.prompt();setInstallPrompt(null)}}
-  const reset=()=>{setMinV(defaults.minV);setMaxV(defaults.maxV);setMinKg(defaults.minKg);setMaxKg(defaults.maxKg);setKg(defaults.kg)}
-  return <main className="shell"><section className="hero card"><div><span className="eyebrow">КАЛІБРУВАЛЬНИЙ ІНСТРУМЕНТ</span><h1>Тензодатчик</h1><p>Розрахунок ваги ↔ напруги з офлайн-доступом</p></div><div className="actions"><span className={'status '+(online?'ok':'off')}>{online?'● Онлайн':'● Офлайн'}</span>{installPrompt&&<button className="button primary" onClick={install}>Встановити</button>}<button className="button" onClick={reset}>Скинути</button></div></section>
-  <section className="layout"><div className="card settings"><h2>Межі шкали</h2><div className="fields"><Field label="Мінімальна вага" unit="кг" value={minKg} step="0.01" onChange={number(setMinKg)}/><Field label="Максимальна вага" unit="кг" value={maxKg} step="0.01" onChange={number(setMaxKg)}/><Field label="Мінімальна напруга" unit="В" value={minV} step="0.001" onChange={number(setMinV)}/><Field label="Максимальна напруга" unit="В" value={maxV} step="0.001" onChange={number(setMaxV)}/></div>{!valid&&<p className="error">Перевірте межі: максимум має бути більшим за мінімум.</p>}</div>
-  <div className="card calculator"><div className="calcHead"><div><span className="label">Поточна вага</span><strong>{Number(kg).toFixed(2)} <small>кг</small></strong></div><div className="voltage"><span className="label">Вихід</span><strong>{Number(voltage).toFixed(3)} <small>В</small></strong></div></div>
-  <label className="inputLabel" htmlFor="weight">Введіть вагу</label><div className="bigInput"><input id="weight" inputMode="decimal" type="number" min={minKg} max={maxKg} step="0.01" value={kg} onChange={e=>setWeight(e.target.value)}/><span>кг</span></div>
-  <input aria-label="Повзунок ваги" className="range" type="range" min={minKg} max={maxKg} step="0.01" value={kg} onChange={e=>setWeight(e.target.value)}/><div className="scale"><span>{Number(minKg).toFixed(2)} кг</span><b>{progress.toFixed(2)}%</b><span>{Number(maxKg).toFixed(2)} кг</span></div>
-  <div className="reverse"><label>Або введіть напругу</label><div><input inputMode="decimal" type="number" step="0.001" value={Number(voltage).toFixed(3)} onChange={e=>valid&&setWeight(vToKg(Number(e.target.value)))}/><span>В</span></div></div></div></section>
-  <section className="card tableCard"><div><h2>Контрольні точки</h2><p>Автоматично перераховуються відповідно до меж</p></div><div className="points">{points.map(x=><div className="point" key={x.p}><span>{x.p}%</span><b>{x.w.toFixed(2)} кг</b><strong>{x.v.toFixed(3)} В</strong></div>)}</div></section><footer>Налаштування зберігаються локально на цьому пристрої.</footer></main>
+ const i=load();const[calMinKg,setCalMinKg]=useState(i.calMinKg),[calMaxKg,setCalMaxKg]=useState(i.calMaxKg),[minV,setMinV]=useState(i.minV),[maxV,setMaxV]=useState(i.maxV),[sliderMinKg,setSliderMinKg]=useState(i.sliderMinKg),[sliderMaxKg,setSliderMaxKg]=useState(i.sliderMaxKg),[kg,setKg]=useState(i.kg),[online,setOnline]=useState(navigator.onLine),[prompt,setPrompt]=useState(null);
+ const calibrationValid=calMaxKg>calMinKg&&maxV!==minV,sliderValid=sliderMaxKg>sliderMinKg,valid=calibrationValid&&sliderValid;
+ const kgToV=w=>minV+((w-calMinKg)/(calMaxKg-calMinKg))*(maxV-minV);
+ const vToKg=v=>calMinKg+((v-minV)/(maxV-minV))*(calMaxKg-calMinKg);
+ const voltage=calibrationValid?kgToV(kg):0;
+ const fillPercent=calMaxKg>0?clamp((Math.max(0,kg)/calMaxKg)*100,0,100):0;
+ const emptyWeight=kg<0?Math.abs(kg):0;
+ useEffect(()=>localStorage.setItem('hopper-scale-v2',JSON.stringify({calMinKg,calMaxKg,minV,maxV,sliderMinKg,sliderMaxKg,kg})),[calMinKg,calMaxKg,minV,maxV,sliderMinKg,sliderMaxKg,kg]);
+ useEffect(()=>{const n=()=>setOnline(navigator.onLine),p=e=>{e.preventDefault();setPrompt(e)};addEventListener('online',n);addEventListener('offline',n);addEventListener('beforeinstallprompt',p);return()=>{removeEventListener('online',n);removeEventListener('offline',n);removeEventListener('beforeinstallprompt',p)}},[]);
+ const points=useMemo(()=>[0,25,50,75,100].map(p=>{const w=calMaxKg*p/100;return{p,w,v:calibrationValid?kgToV(w):0}}),[calMinKg,calMaxKg,minV,maxV,calibrationValid]);
+ const num=s=>e=>s(e.target.value===''?'':Number(e.target.value));const setWeight=v=>setKg(clamp(Number(v)||0,Number(sliderMinKg),Number(sliderMaxKg)));
+ const reset=()=>{setCalMinKg(D.calMinKg);setCalMaxKg(D.calMaxKg);setMinV(D.minV);setMaxV(D.maxV);setSliderMinKg(D.sliderMinKg);setSliderMaxKg(D.sliderMaxKg);setKg(D.kg)};
+ const install=async()=>{if(prompt){await prompt.prompt();setPrompt(null)}};
+ return <main className="shell">
+  <header className="hero card"><div><span className="eyebrow">КАЛІБРУВАЛЬНИЙ ІНСТРУМЕНТ</span><h1>Бункерні ваги</h1><p>Тарування тензодатчика та візуалізація заповнення</p></div><div className="actions"><span className={'status '+(online?'ok':'off')}>● {online?'Онлайн':'Офлайн'}</span>{prompt&&<button className="button primary" onClick={install}>Встановити</button>}<button className="button" onClick={reset}>Скинути</button></div></header>
+  <section className="layout">
+   <aside className="settings">
+    <div className="card panel"><h2>Точки тарування</h2><p className="hint">Ці значення визначають формулу «вага ↔ напруга».</p><div className="fields"><Field label="Мінімальна вага тарування" unit="кг" value={calMinKg} step="0.01" onChange={num(setCalMinKg)}/><Field label="Максимальна вага тарування" unit="кг" value={calMaxKg} step="0.01" onChange={num(setCalMaxKg)}/><Field label="Напруга при мінімумі" unit="В" value={minV} step="0.001" onChange={num(setMinV)}/><Field label="Напруга при максимумі" unit="В" value={maxV} step="0.001" onChange={num(setMaxV)}/></div></div>
+    <div className="card panel"><h2>Межі повзунка</h2><p className="hint">Лише робочий діапазон ручного керування.</p><div className="fields two"><Field label="Мінімум повзунка" unit="кг" value={sliderMinKg} step="0.01" onChange={num(setSliderMinKg)}/><Field label="Максимум повзунка" unit="кг" value={sliderMaxKg} step="0.01" onChange={num(setSliderMaxKg)}/></div>{!valid&&<p className="error">Перевірте межі тарування та повзунка.</p>}</div>
+   </aside>
+   <section className="card calculator"><div className="calcHead"><Metric label="Поточна вага" value={Number(kg).toFixed(2)} unit="кг"/><Metric blue label="Вихід" value={Number(voltage).toFixed(3)} unit="В"/></div>
+    <label className="inputLabel">Введіть вагу</label><div className="bigInput"><input type="number" inputMode="decimal" min={sliderMinKg} max={sliderMaxKg} step="0.01" value={kg} onChange={e=>setWeight(e.target.value)}/><span>кг</span></div>
+    <input className="range" type="range" min={sliderMinKg} max={sliderMaxKg} step="0.01" value={kg} onChange={e=>setWeight(e.target.value)}/><div className="scale"><span>{Number(sliderMinKg).toFixed(2)} кг</span><b>Крок 0,01 кг</b><span>{Number(sliderMaxKg).toFixed(2)} кг</span></div>
+    <div className="hopperWrap"><div className="hopper"><div className="grain" style={{height:`${fillPercent}%`}}></div><div className="hopperText"><strong>{fillPercent.toFixed(2)}%</strong><span>{kg<0?'Порожня тара':'Заповнення'}</span></div></div><div className="fillInfo"><span>Рівень заповнення</span><strong>{fillPercent.toFixed(2)}%</strong><div className="fillBar"><i style={{width:`${fillPercent}%`}}/></div><p>{kg<0?`Від’ємна вага ${Number(kg).toFixed(2)} кг враховується як порожня тара. Заповнення: 0%.`:`Розрахунок від 0 до ${Number(calMaxKg).toFixed(2)} кг за максимальною шкалою.`}</p>{emptyWeight>0&&<small>Відхилення нуля: −{emptyWeight.toFixed(2)} кг</small>}</div></div>
+    <div className="reverse"><label>Або введіть напругу</label><div><input type="number" inputMode="decimal" step="0.001" value={Number(voltage).toFixed(3)} onChange={e=>calibrationValid&&setWeight(vToKg(Number(e.target.value)))}/><span>В</span></div></div>
+   </section>
+  </section>
+  <section className="card tableCard"><h2>Контрольні точки заповнення бункера</h2><p className="hint">Відсоток завжди відраховується від 0 кг до максимальної ваги тарування.</p><div className="points">{points.map(x=><div className="point" key={x.p}><span>{x.p}%</span><b>{x.w.toFixed(2)} кг</b><strong>{x.v.toFixed(3)} В</strong></div>)}</div></section><footer>Налаштування автоматично зберігаються на пристрої.</footer>
+ </main>
 }
-function Field({label,unit,...props}){return <label className="field"><span>{label}</span><div><input type="number" inputMode="decimal" {...props}/><b>{unit}</b></div></label>}
+function Field({label,unit,...p}){return <label className="field"><span>{label}</span><div><input type="number" inputMode="decimal" {...p}/><b>{unit}</b></div></label>};function Metric({label,value,unit,blue}){return <div className={blue?'metric blue':'metric'}><span>{label}</span><strong>{value} <small>{unit}</small></strong></div>}
